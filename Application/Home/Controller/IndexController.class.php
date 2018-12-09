@@ -112,24 +112,157 @@ class IndexController extends Controller {
         if(IS_POST){
 
         }else{
+            $User = M('data');
+            $list = $User->limit(3)->select();
+            // var_dump($list);
+            $list2 = array(0=>array('academy' => '信电','special'=>['special1','special2','special3']),
+                          1=>array('academy' => '财会','special'=>['special4','special5','special6'])
+                );
+            // var_dump($list2);die();
+            $this->assign('list2',$list2);
+
             $this->display();
         }
     }
 
-    public function cultivate(){
-        $data = I('post.');
-        var_dump($data);
+    //按学院/专业进行随机抽取
+    public function major(){
+        $DATA = M('data');
+        $avoid = I('post.open');//是否避免同一导师
+        $ratio = I('post.partTime')/100;//设置比例
+        $DATA->where(array('flag'=>1))->setField('flag',0);
+        $Model = new \Think\Model(); // 实例化一个model对象 没有对应任何数据表
+        $singleArr = $Model->query("SELECT distinct(majorCode) FROM `data` WHERE majorCode IN (SELECT majorCode FROM `data` GROUP BY majorCode HAVING COUNT(majorCode)=1)");
+        // var_dump($singleArr);die;
+        //某专业只有一个人，则此人必中
+        foreach ($singleArr as $kk => $vv) {
+            $DATA->where(array('majorCode'=>$vv['majorCode']))->setField('flag',1);
+        }
+        
+        $majorCode = $DATA->distinct(true)->field('majorCode')->select();//所有专业
+        if($avoid == 1){ //如果避免同一导师
+            foreach ($majorCode as $key => $value) {  //71
+                echo "第".($key+1)."个专业".$value['majorCode'];
+                $map['majorCode'] = array('EQ',$value['majorCode']);
+                $stu_num = $DATA->where($map)->count('number');//某专业学生总人数
+                echo "共".$stu_num."人，";
+                $extract_num = ceil($stu_num*$ratio);//应抽取人数               
+                $tutorArr = $DATA->distinct(true)->field('tutor')->where($map)->select();//某专业导师
+                $tutorNum = count($tutorArr);//该专业导师人数
+                if($extract_num <= $tutorNum){  //如果应抽取人数<导师人数
+                    foreach ($tutorArr as $k => $v) {  
+                        $tutor = $v['tutor'];
+                        $result = $DATA->where(array('tutor'=>$tutor,'flag'=>1))->find();
+                        if(!$result){//如果该导师没有学生被抽中
+                            $map2['majorCode'] = array('EQ',$value['majorCode']);
+                            $map2['tutor'] = array('EQ',$tutor);
+                            $student = $DATA->where($map2)->limit(1)->order('rand()')->find();//某个导师抽取一人
+                            $DATA->where(array('number'=>$student['number']))->setField('flag',1);
+                        }
+                    }
+                    $map3['majorCode'] = array('EQ',$value['majorCode']);
+                    $map3['flag'] = array('EQ',1);
+                    $stu = $DATA->where($map3)->limit($extract_num)->order('rand()')->select();
+                    // var_dump($stu);
+                    if(count($stu)<$extract_num){  
+                        // 如果实际抽取人数<应抽取人数，此时无法避免
+                        // echo "实际抽取人数<应抽取人数，此时无法避免";
+                        $map3['flag'] = array('EQ',0);
+                        $add = $extract_num-count($stu);//补充人数
+                        $stu1 = $DATA->where($map3)->limit($add)->order('rand()')->select();
+                        $stu = array_merge($stu,$stu1);
+
+                    }
+                    
+                    // if(count($stu)==0){
+                    //     echo "应抽取".$extract_num."人,未抽中学生";
+                    // }else{
+                    //     echo "应抽取".$extract_num."人,实际抽取".count($stu)."人";
+                    // }                    
+                    // if($extract_num == count($stu)){
+                    //     echo "，√<br/>";
+                    // }else{
+                    //     echo "，×<br/>";
+                    // }
+
+                    foreach ($stu as $kkk => $vvv) {
+                        $export[] = $vvv;
+                    }
+
+                }else{  // 如果应抽取人数大于导师人数，此时无法避免
+                    $stu = $DATA->where($map)->limit($extract_num)->order('rand()')->select();
+                    foreach ($stu as $k => $v) {
+                        $export[] = $v;
+                    }                                    
+                }          
+            }
+            // var_dump($export);
+        }else{  //不避免同一导师，直接随机抽取
+            foreach ($majorCode as $key => $value) {  //71
+                // echo "第".($key+1)."个专业".$value['majorCode'];
+                $map['majorCode'] = array('EQ',$value['majorCode']);
+                $stu_num = $DATA->where($map)->count('number');//某专业学生总人数
+                // echo "共".$stu_num."人，";
+                $extract_num = ceil($stu_num*$ratio);//应抽取人数                  
+                $stu = $DATA->where($map)->limit($extract_num)->order('rand()')->select();
+                // var_dump($stu);die;
+                foreach ($stu as $k => $v) {
+                    $export[] = $v;
+                }
+                //$export[] = $this->mergee($stu);
+                
+                // if(count($stu)==0){
+                //     echo "应抽取".$extract_num."人,未抽中学生";
+                // }else{
+                //     echo "应抽取".$extract_num."人,实际抽取".count($stu)."人";
+                // }                    
+                // if($extract_num == count($stu)){
+                //     echo "，√<br/>";
+                // }else{
+                //     echo "，×<br/>";
+                // }                
+            }
+            // var_dump($export);
+        }
+        $DATA->where(array('flag'=>1))->setField('flag',0);
+        foreach ($export as $key => $value) {
+            $DATA->where(array('number'=>$value['number']))->setField('flag',1);
+        }
+        $this->export();
     }
 
     public function academy(){
-        $data = I('post.');
+        $data = I('get.');
         var_dump($data);
     }
     public function degree(){
         $data = I('post.');
-        var_dump($data);
+
+        $this->ajaxReturn(1);
     }
 
+    //查看 应抽查人数是否大于导师人数
+    public function check(){
+        $DATA = M('data');
+        $avoid = 1;
+        $ratio = 0.1;
+        $majorCode = $DATA->distinct(true)->field('majorCode')->select();//全日制所有专业
+        foreach ($majorCode as $key => $value) {  //74层
+            $map['majorCode'] = array('EQ',$value['majorCode']);
+            $stu_num = $DATA->where($map)->count('number');//某专业学生总数
+            // echo $stu_num;
+            $extract_num = ceil($stu_num*$ratio);//抽取人数
+            // echo "专业".$value['majorCode']."共".$stu_num."人，";
+            $tutorArr = $DATA->distinct(true)->field('tutor')->where($map)->select();//某专业导师
+            $tutorNum = count($tutorArr);//某专业导师人数
+            if($extract_num > $tutorNum){
+                echo $value['majorCode']."，抽取人数大于导师人数<br/>";
+            }else{
+                echo $value['majorCode']."，抽取人数小于导师人数<br/>";
+            }
+        }
+
+    }
 
 
 
@@ -168,6 +301,61 @@ class IndexController extends Controller {
         return $data;
     }
 
+    /**
+     * 导出 抽查名单excel
+     * @author 小菜比
+     * @copyright  2018-12-09 14:17Authors
+     * @var  
+     * @return 
+     */
+    public function export() {
+        $DATA = M('data');
+
+        $title = array('学号','年级','姓名','性别','证件号码','培养类型','学院','专业代码','专业','导师','到期时间','学位类别');
+        $filename  = '浙江工商大学毕业论文抽查名单';
+        $map['flag'] = array('EQ',1);
+        $list = $DATA->where($map)->field('number,grade,name,sex,idcard,cultivationType,academy,academyCode,major,tutor,expirationDate,degreeType')->order('academy,major')->select();
+
+        $this->excell($list, $title, $filename);
+    }
+
+
+    public function excell($arr=array(),$title=array(),$filename='export'){
+        header("Content-type:application/octet-stream");
+        header("Accept-Ranges:bytes");
+        header("Content-type:application/vnd.ms-excel");  
+        header("Content-Disposition:attachment;filename=".$filename.".xls");
+        header("Pragma: no-cache");
+        header("Expires: 0");
+        //导出xls 开始
+      
+        if (!empty($title)){
+            foreach ($title as $k => $v) {
+                $title[$k]=iconv("UTF-8", "GB2312",$v);
+            }
+            $title= implode("\t", $title);
+            echo "$title\n";
+        }
+        //查询数据库  $arr 是二维数组
+
+        if(!empty($arr)){
+            foreach($arr as $key=>$val){
+                foreach ($val as $ck => $cv) {
+                    // $arr[$key][$ck]=iconv("UTF-8", "GB2312", $cv);
+                    $arr[$key][$ck]=iconv("UTF-8", "gbk//TRANSLIT", $cv);
+                    // if($ck==9 && strlen($arr[$key][$ck])==5){
+                    //     $arr[$key][$ck] = '0'.$arr[$key][$ck];
+                    // }
+
+                }
+                $arr[$key]=implode("\t", $arr[$key]);
+            }
+            echo implode("\n",$arr);
+        }
+
+        // die;
+        // 使用die是为了避免输出多余的模板html代码
+    }
     public function extract(){
 
     }
