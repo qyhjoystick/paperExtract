@@ -76,6 +76,7 @@ class IndexController extends Controller {
 
             $stu_num = count($source);//1524人
             // echo $stu_num;die;
+            $data->where('1')->delete();
             for($i = 2 ; $i < $stu_num+1 ; $i++){
                 $dataList = array(  //单条插入
                 // $dataList[] = array(  //批量插入
@@ -86,23 +87,22 @@ class IndexController extends Controller {
                     'idcard'          => $source[$i]['E'], //'E' => string '证件号码' (length=12)
                     'cultivationType' => $source[$i]['F'], //'F' => string '培养类型' (length=12)
                     'academy'         => $source[$i]['G'], //'G' => string '学院' (length=6)
-                    'acadeCode'       => $source[$i]['H'], //'H' => string '学院' (length=6)
+                    'academyCode'       => $source[$i]['H'], //'H' => string '学院代码' (length=6)
                     'major'           => $source[$i]['I'], //'I' => string '专业' (length=6)
                     'majorCode'       => $source[$i]['J'], //'J' => string '专业代码' (length=12)
                     'tutor'           => $source[$i]['K'], //'K' => string '导师' (length=6)
                     'expirationDate'  => $source[$i]['L'], //'L' => string '到期时间' (length=12)
                     'degreeType'      => $source[$i]['M'], //'M' => string '学位类别' (length=12)
+                    'flag'            => 0,
                 );
                 // var_dump($dataList);
                 $data->data($dataList)->add();//循环插入需26s
                 
 
             }
+            // $this->ajaxReturn(1);
             $this->redirect('Index/condition');
-            // var_dump($dataList);die;
-			// $data->addAll($dataList);//批量插入
-
-            //$this->display();
+ 
 
     	}
 	    
@@ -128,8 +128,11 @@ class IndexController extends Controller {
     //按学院/专业进行随机抽取
     public function major(){
         $DATA = M('data');
-        $avoid = I('post.open');//是否避免同一导师
+        $avoid = I('post.tutor');//是否避免同一导师
         $ratio = I('post.partTime')/100;//设置比例
+        // echo $avoid;
+        // echo "</br>";
+        // echo $ratio;die();
         $DATA->where(array('flag'=>1))->setField('flag',0);
         $Model = new \Think\Model(); // 实例化一个model对象 没有对应任何数据表
         $singleArr = $Model->query("SELECT distinct(majorCode) FROM `data` WHERE majorCode IN (SELECT majorCode FROM `data` GROUP BY majorCode HAVING COUNT(majorCode)=1)");
@@ -139,16 +142,18 @@ class IndexController extends Controller {
             $DATA->where(array('majorCode'=>$vv['majorCode']))->setField('flag',1);
         }
         
-        $majorCode = $DATA->distinct(true)->field('majorCode')->select();//所有专业
+        $majorCode = $DATA->distinct(true)->field('majorCode')->order('majorCode')->select();//所有专业
         if($avoid == 1){ //如果避免同一导师
             foreach ($majorCode as $key => $value) {  //71
-                echo "第".($key+1)."个专业".$value['majorCode'];
+                // $value['majorCode'] = '025100';
+                // echo "第".($key+1)."个专业".$value['majorCode'];
                 $map['majorCode'] = array('EQ',$value['majorCode']);
                 $stu_num = $DATA->where($map)->count('number');//某专业学生总人数
-                echo "共".$stu_num."人，";
+                // echo "学生共".$stu_num."人，";
                 $extract_num = ceil($stu_num*$ratio);//应抽取人数               
                 $tutorArr = $DATA->distinct(true)->field('tutor')->where($map)->select();//某专业导师
                 $tutorNum = count($tutorArr);//该专业导师人数
+                // echo "导师共".$tutorNum."人，";
                 if($extract_num <= $tutorNum){  //如果应抽取人数<导师人数
                     foreach ($tutorArr as $k => $v) {  
                         $tutor = $v['tutor'];
@@ -159,26 +164,36 @@ class IndexController extends Controller {
                             $student = $DATA->where($map2)->limit(1)->order('rand()')->find();//某个导师抽取一人
                             $DATA->where(array('number'=>$student['number']))->setField('flag',1);
                         }
+                        // else{
+                        //     echo $tutor."已有学生被抽中<br/>";
+                        // }
                     }
                     $map3['majorCode'] = array('EQ',$value['majorCode']);
                     $map3['flag'] = array('EQ',1);
                     $stu = $DATA->where($map3)->limit($extract_num)->order('rand()')->select();
                     // var_dump($stu);
+                    $DATA->where(array('flag'=>1,'majorCode'=>$value['majorCode']))->setField('flag',0);
+                    foreach ($stu as $kq => $vq) {
+                        $DATA->where(array('number'=>$vq['number']))->setField('flag',1);
+                    }
+
+                    // if(count($stu)==0){
+                    //     echo "应抽取".$extract_num."人,未抽中学生。";
+                    // }else{
+                    //     echo "应抽取".$extract_num."人,实际抽取".count($stu)."人。";
+                    // }
+
                     if(count($stu)<$extract_num){  
                         // 如果实际抽取人数<应抽取人数，此时无法避免
-                        // echo "实际抽取人数<应抽取人数，此时无法避免";
-                        $map3['flag'] = array('EQ',0);
-                        $add = $extract_num-count($stu);//补充人数
-                        $stu1 = $DATA->where($map3)->limit($add)->order('rand()')->select();
+                        // echo "实际抽取人数<应抽取人数，此时无法避免。";
+                        $map4['majorCode'] = array('EQ',$value['majorCode']);
+                        $map4['flag'] = array('EQ',0);
+                        $add = $extract_num-count($stu);
+                        $stu1 = $DATA->where($map4)->limit($add)->order('rand()')->select();
                         $stu = array_merge($stu,$stu1);
-
                     }
                     
-                    // if(count($stu)==0){
-                    //     echo "应抽取".$extract_num."人,未抽中学生";
-                    // }else{
-                    //     echo "应抽取".$extract_num."人,实际抽取".count($stu)."人";
-                    // }                    
+
                     // if($extract_num == count($stu)){
                     //     echo "，√<br/>";
                     // }else{
@@ -189,12 +204,14 @@ class IndexController extends Controller {
                         $export[] = $vvv;
                     }
 
-                }else{  // 如果应抽取人数大于导师人数，此时无法避免
+                }else{  // 如果应抽取人数大于导师人数，此时无法避免，这情况概率较小
                     $stu = $DATA->where($map)->limit($extract_num)->order('rand()')->select();
                     foreach ($stu as $k => $v) {
                         $export[] = $v;
-                    }                                    
-                }          
+                    }
+                    // echo "应抽取人数>导师人数，此时无法避免<br/>";
+                }
+                // die;
             }
             // var_dump($export);
         }else{  //不避免同一导师，直接随机抽取
@@ -229,6 +246,7 @@ class IndexController extends Controller {
             $DATA->where(array('number'=>$value['number']))->setField('flag',1);
         }
         $this->export();
+        // $this->ajaxReturn(1);
     }
 
     public function academy(){
@@ -314,7 +332,7 @@ class IndexController extends Controller {
         $title = array('学号','年级','姓名','性别','证件号码','培养类型','学院','专业代码','专业','导师','到期时间','学位类别');
         $filename  = '浙江工商大学毕业论文抽查名单';
         $map['flag'] = array('EQ',1);
-        $list = $DATA->where($map)->field('number,grade,name,sex,idcard,cultivationType,academy,academyCode,major,tutor,expirationDate,degreeType')->order('academy,major')->select();
+        $list = $DATA->where($map)->field('number,grade,name,sex,idcard,cultivationType,academy,academyCode,major,tutor,expirationDate,degreeType')->order('academy,major,number')->select();
 
         $this->excell($list, $title, $filename);
     }

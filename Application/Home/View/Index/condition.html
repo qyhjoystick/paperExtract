@@ -8,6 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css"  media="all">
   <script src="__PUBLIC__/jquery.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.5.3/less.min.js"></script>
   <!-- 注意：如果你直接复制所有代码到本地，上述css路径需要改成你本地的 -->
 </head>
 <style type="text/css">
@@ -83,8 +84,7 @@
 		<span class="extract">按比例抽取</span>
 		<div class="layui-form-item cen" style="margin-top:10%">
 			<div class="part">
-				<form action="{:U('Index/major')}" method="post">
-					
+				<form action="{:U('Index/major')}" method="post" id="gg">
 					<br>
 					<br>
 					<br>
@@ -92,7 +92,7 @@
 					<input type="text" name="partTime" lay-verify="title" autocomplete="off" placeholder="请输入比例" class="layui-input" style="display:inline;width:50%">
 					<span>%</span>	
 					<input type="hidden" name="tutor" value="1" class="tutor">
-					<button class="layui-btn" lay-submit="" lay-filter="demo2" style="margin-top:50px">生成Excel</button>
+					<button class="layui-btn" lay-submit="" lay-filter="demo2" style="margin-top:50px" onclick="sub()">生成Excel</button>
 				</form>
 			</div>
 		</div>
@@ -195,6 +195,16 @@
 <script src="__PUBLIC__/layui/layui.js" charset="utf-8"></script>
 <!-- 注意：如果你直接复制所有代码到本地，上述js路径需要改成你本地的 -->
 <script>
+function sub(){
+	wait = layer.load();
+	//失去焦点就取消gif
+
+}
+
+window.onblur = function(){
+	layer.close(wait);
+}
+
 layui.use(['form', 'layedit', 'laydate'], function(){
   form = layui.form
   ,layer = layui.layer
@@ -300,10 +310,6 @@ function submitt(){
 	//拥有id节点个数
 	var idnumber = all.childNodes.length-2;
 	console.log(idnumber);
-
-
-
-
 
 	for(let i = 1 ;i < idnumber+1 ; i++){
 		var academy = [];
