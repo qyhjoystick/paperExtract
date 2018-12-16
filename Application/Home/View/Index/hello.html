@@ -30,6 +30,9 @@
 function wait(){
 	wait = layer.load();
 }
+window.onfocus = function(){
+	layer.close(wait);
+}
 
 layui.use('upload', function(){
     var $ = layui.jquery,

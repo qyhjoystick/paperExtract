@@ -59,6 +59,7 @@
 		font-size: 30px;
 	}
 	.part{
+		position: relative;
 		text-align: center;
 		margin:10% 10%;
 	}
@@ -78,7 +79,7 @@
 <body>
 
 <div class="content">
-	<div class="type" style="height:345px">
+	<div class="type" style="height:460px">
 		<br>
 		<br>
 		<span class="extract">按比例抽取</span>
@@ -92,14 +93,14 @@
 					<input type="text" name="partTime" lay-verify="title" autocomplete="off" placeholder="请输入比例" class="layui-input" style="display:inline;width:50%">
 					<span>%</span>	
 					<input type="hidden" name="tutor" value="1" class="tutor">
-					<button class="layui-btn" lay-submit="" lay-filter="demo2" style="margin-top:50px" onclick="sub()">生成Excel</button>
+					<button class="layui-btn" lay-submit="" lay-filter="demo2" style="margin-top:73px" onclick="sub()">生成Excel</button>
 				</form>
 			</div>
 		</div>
 	</div>
 	
 
-	<div class="type" style="height:100%">
+	<div class="type" style="height:100%;background-color:rgba(253, 0, 0, 0.03);">
 		<br>
 		<br>
 		<span class="extract">学院专业抽取</span>
@@ -126,11 +127,8 @@
 									<span>%</span>
 								</div>
 						    </div>
-						</div>
-					    
+						</div>			    
 					    <br>
-
-					    
 					    <div class="special" style="position:relative">
 					    	<label class="layui-form-label">专业：</label>
 							    <div class="layui-input-block">
@@ -152,11 +150,13 @@
 								    <br>
 								</div>
 							<button class="layui-btn layui-btn-xs layui-btn-normal" style="position:absolute;border-radius:10px;right:0px;top:-24px;z-index:2;width: 22px;" onclick="addSpecial(event)" type="button">+</button>	
+
 					    </div>
 
 
 					    <hr>   
 					</div>
+
 				</div>
 <!--***********************all结束 ************************-->
 
@@ -167,9 +167,10 @@
 				</div>
 			    <input type="hidden" name="tutor" value="1" class="tutor">
 				<button class="layui-btn" lay-submit="" lay-filter="demo3" style="margin-top:10px" type="button" onclick="submitt()">生成Excel</button>
-				
+				<h1>(暂未完成)</h1>
 			</form>	
 		</div>
+
 	</div>
 
 
